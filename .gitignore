@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Django specific
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# Environments
+.env
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest / Coverage
+htmlcov/
+.tox/
+.coverage
+.cache
+.pytest_cache/
+
+# Migrations (optional)
+**/migrations/*.pyc
+**/migrations/__pycache__/
