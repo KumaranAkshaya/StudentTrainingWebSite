@@ -1,3 +1,5 @@
+# student_app/serializers.py
+
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
@@ -17,8 +19,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
-        user = User.objects.create_user(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -26,7 +27,7 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, data):
         user = authenticate(username=data['username'], password=data['password'])
-        if user is None:
+        if not user:
             raise serializers.ValidationError("Invalid username or password")
         data['user'] = user
         return data
