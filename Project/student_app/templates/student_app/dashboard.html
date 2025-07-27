@@ -1,8 +1,438 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
-<head><title>Dashboard</title></head>
-<body>
-    <h2>Welcome, {{ request.user.username }}</h2>
-    <a href="{% url 'logout' %}">Logout</a>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        }
+        .modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-content {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .table-row:hover {
+            background-color: #f1f5f9;
+            transition: background-color 0.2s;
+        }
+        .badge {
+            padding: 0.5em 1em;
+            border-radius: 9999px;
+            font-weight: 500;
+        }
+        .tab {
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            border-bottom: 3px solid #4f46e5;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="container max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-gray-800">Management Dashboard</h2>
+            <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-200">Logout</a>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <a href="{% url 'dashboard' tab='students' %}" class="tab px-4 py-2 text-gray-600 hover:text-indigo-600 {% if active_tab == 'students' %}active{% endif %}">Students</a>
+            <a href="{% url 'dashboard' tab='courses' %}" class="tab px-4 py-2 text-gray-600 hover:text-indigo-600 {% if active_tab == 'courses' %}active{% endif %}">Courses</a>
+            <a href="{% url 'dashboard' tab='schedules' %}" class="tab px-4 py-2 text-gray-600 hover:text-indigo-600 {% if active_tab == 'schedules' %}active{% endif %}">Schedules</a>
+            <a href="{% url 'dashboard' tab='opts' %}" class="tab px-4 py-2 text-gray-600 hover:text-indigo-600 {% if active_tab == 'opts' %}active{% endif %}">Opt In/Out</a>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="bg-green-100 text-green-800 p-4 rounded-lg">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Students Tab -->
+        {% if active_tab == 'students' %}
+        <div class="tab-content">
+            <div class="flex justify-end mb-6">
+                <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition duration-200 flex items-center" onclick="openModal('student')">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Student
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-600 text-white">
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Phone</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Email</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Address</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="table-row border-b border-gray-200">
+                            <td class="px-6 py-4 text-gray-700">{{ student.name }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ student.phone }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ student.email }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ student.address }}</td>
+                            <td class="px-6 py-4">
+                                <button class="bg-gray-500 text-white px-3 py-1 rounded-lg hover:bg-gray-600 transition duration-200 text-sm" onclick="openEditModal('student', '{{ student.id }}', '{{ student.name|escapejs }}', '{{ student.phone|escapejs }}', '{{ student.email|escapejs }}', '{{ student.address|escapejs }}')">Edit</button>
+                                <a href="{% url 'dashboard' tab='students' %}?delete={{ student.id }}&type=student" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition duration-200 text-sm" onclick="return confirm('Are you sure you want to delete this student?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500 py-6">No students available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Courses Tab -->
+        {% if active_tab == 'courses' %}
+        <div class="tab-content">
+            <div class="flex justify-end mb-6">
+                <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition duration-200 flex items-center" onclick="openModal('course')">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Course
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-600 text-white">
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Description</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Duration</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in courses %}
+                        <tr class="table-row border-b border-gray-200">
+                            <td class="px-6 py-4 text-gray-700">{{ course.name }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ course.description }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ course.duration }}</td>
+                            <td class="px-6 py-4">
+                                <button class="bg-gray-500 text-white px-3 py-1 rounded-lg hover:bg-gray-600 transition duration-200 text-sm" onclick="openEditModal('course', '{{ course.id }}', '{{ course.name|escapejs }}', '{{ course.description|escapejs }}', '{{ course.duration|escapejs }}')">Edit</button>
+                                <a href="{% url 'dashboard' tab='courses' %}?delete={{ course.id }}&type=course" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition duration-200 text-sm" onclick="return confirm('Are you sure you want to delete this course?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-gray-500 py-6">No courses available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Schedules Tab -->
+        {% if active_tab == 'schedules' %}
+        <div class="tab-content">
+            <div class="flex justify-end mb-6">
+                <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition duration-200 flex items-center" onclick="openModal('schedule')">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Schedule
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-600 text-white">
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Course</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Start Date</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">End Date</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Time</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Location</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in schedules %}
+                        <tr class="table-row border-b border-gray-200">
+                            <td class="px-6 py-4 text-gray-700">{{ schedule.course.name }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ schedule.start_date }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ schedule.end_date }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ schedule.time }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ schedule.location }}</td>
+                            <td class="px-6 py-4">
+                                <button class="bg-gray-500 text-white px-3 py-1 rounded-lg hover:bg-gray-600 transition duration-200 text-sm" onclick="openEditModal('schedule', '{{ schedule.id }}', '{{ schedule.course.id }}', '{{ schedule.start_date }}', '{{ schedule.end_date }}', '{{ schedule.time }}', '{{ schedule.location|escapejs }}')">Edit</button>
+                                <a href="{% url 'dashboard' tab='schedules' %}?delete={{ schedule.id }}&type=schedule" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition duration-200 text-sm" onclick="return confirm('Are you sure you want to delete this schedule?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-gray-500 py-6">No schedules available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Opt In/Out Tab -->
+        {% if active_tab == 'opts' %}
+        <div class="tab-content">
+            <div class="flex justify-end mb-6">
+                <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition duration-200 flex items-center" onclick="openModal('opt')">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Opt
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-600 text-white">
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Student</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Schedule</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Status</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Opted At</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr class="table-row border-b border-gray-200">
+                            <td class="px-6 py-4 text-gray-700">{{ record.student.name }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ record.schedule }}</td>
+                            <td class="px-6 py-4">
+                                <span class="badge {{ record.opted_in|yesno:'bg-green-100 text-green-800,bg-red-100 text-red-800' }}">
+                                    {{ record.opted_in|yesno:"In,Out" }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-gray-700">{{ record.opted_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-6 py-4">
+                                <button class="bg-gray-500 text-white px-3 py-1 rounded-lg hover:bg-gray-600 transition duration-200 text-sm" onclick="openEditModal('opt', '{{ record.id }}', '{{ record.student.id }}', '{{ record.schedule.id }}', '{{ record.opted_in }}')">Edit</button>
+                                <a href="{% url 'dashboard' tab='opts' %}?delete={{ record.id }}&type=opt" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition duration-200 text-sm" onclick="return confirm('Are you sure you want to delete this record?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500 py-6">No data found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Modals -->
+        <!-- Student Modal -->
+        <div class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" id="studentModal">
+            <div class="modal-content bg-white rounded-2xl p-8 w-full max-w-md">
+                <h5 class="text-xl font-semibold text-gray-800 mb-6" id="studentModalLabel">Add Student</h5>
+                <form method="post" id="studentForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="student">
+                    <input type="hidden" name="id" id="studentId">
+                    <div class="mb-4">
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="name" id="name" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="phone" id="phone" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="email" id="email" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="address" id="address" required>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-200" id="studentSubmitBtn">Save</button>
+                        <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200" onclick="closeModal('student')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Course Modal -->
+        <div class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" id="courseModal">
+            <div class="modal-content bg-white rounded-2xl p-8 w-full max-w-md">
+                <h5 class="text-xl font-semibold text-gray-800 mb-6" id="courseModalLabel">Add Course</h5>
+                <form method="post" id="courseForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="course">
+                    <input type="hidden" name="id" id="courseId">
+                    <div class="mb-4">
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="name" id="courseName" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="description" id="courseDescription" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-6">
+                        <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="duration" id="courseDuration" required>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-200" id="courseSubmitBtn">Save</button>
+                        <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200" onclick="closeModal('course')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Schedule Modal -->
+        <div class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" id="scheduleModal">
+        <div class="modal-content bg-white rounded-2xl p-8 w-full max-w-md">
+            <h5 class="text-xl font-semibold text-gray-800 mb-6" id="scheduleModalLabel">Add Schedule</h5>
+            <form method="post" id="scheduleForm">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="schedule">
+                <input type="hidden" name="id" id="scheduleId">
+                <div class="mb-4">
+                    <label for="course" class="block text-sm font-medium text-gray-700 mb-1">Course</label>
+                    <select name="course" id="scheduleCourse" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                        <option value="">-- Select Course --</option>
+                        {% for course in schedule_form.fields.course.queryset %}
+                            <option value="{{ course.id }}">{{ course.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="start_date" id="startDate" required>
+                </div>
+                <div class="mb-4">
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="end_date" id="endDate" required>
+                </div>
+                <div class="mb-4">
+                    <label for="time" class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                    <input type="time" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="time" id="scheduleTime" required>
+                </div>
+                <div class="mb-6">
+                    <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" name="location" id="scheduleLocation" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-200" id="scheduleSubmitBtn">Save</button>
+                    <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200" onclick="closeModal('schedule')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+        <!-- Opt Modal -->
+        <div class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" id="optModal">
+            <div class="modal-content bg-white rounded-2xl p-8 w-full max-w-md">
+                <h5 class="text-xl font-semibold text-gray-800 mb-6" id="optModalLabel">Add Opt In/Out</h5>
+                <form method="post" id="optForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="opt">
+                    <input type="hidden" name="id" id="optId">
+                    <div class="mb-4">
+                        <label for="student" class="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                        <select name="student" id="optStudent" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            <option value="">-- Select Student --</option>
+                            {% for student in opt_form.fields.student.queryset %}
+                                <option value="{{ student.id }}">{{ student.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="schedule" class="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
+                        <select name="schedule" id="optSchedule" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            <option value="">-- Select Schedule --</option>
+                            {% for schedule in opt_form.fields.schedule.queryset %}
+                                <option value="{{ schedule.id }}">{{ schedule }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label for="opted_in" class="block text-sm font-medium text-gray-700 mb-1">Opt In?</label>
+                        <select name="opted_in" id="optStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-200" id="optSubmitBtn">Save</button>
+                        <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200" onclick="closeModal('opt')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(type) {
+            document.getElementById(type + 'ModalLabel').innerText = 'Add ' + type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById(type + 'SubmitBtn').innerText = 'Save';
+            document.getElementById(type + 'Form').reset();
+            document.getElementById(type + 'Id').value = '';
+            document.getElementById(type + 'Modal').style.display = 'flex';
+        }
+
+        function openEditModal(type, id, ...args) {
+            document.getElementById(type + 'ModalLabel').innerText = 'Edit ' + type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById(type + 'SubmitBtn').innerText = 'Update';
+            document.getElementById(type + 'Id').value = id;
+            if (type === 'student') {
+                document.getElementById('name').value = args[0];
+                document.getElementById('phone').value = args[1];
+                document.getElementById('email').value = args[2];
+                document.getElementById('address').value = args[3];
+            } else if (type === 'course') {
+                document.getElementById('courseName').value = args[0];
+                document.getElementById('courseDescription').value = args[1];
+                document.getElementById('courseDuration').value = args[2];
+            } else if (type === 'schedule') {
+                document.getElementById('scheduleCourse').value = args[0];
+                document.getElementById('startDate').value = args[1];
+                document.getElementById('endDate').value = args[2];
+                document.getElementById('scheduleTime').value = args[3];
+                document.getElementById('scheduleLocation').value = args[4];
+            } else if (type === 'opt') {
+                document.getElementById('optStudent').value = args[0];
+                document.getElementById('optSchedule').value = args[1];
+                document.getElementById('optStatus').value = args[2];
+            }
+            document.getElementById(type + 'Modal').style.display = 'flex';
+        }
+
+        function closeModal(type) {
+            document.getElementById(type + 'Modal').style.display = 'none';
+            document.getElementById(type + 'Form').reset();
+            document.getElementById(type + 'Id').value = '';
+        }
+
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
